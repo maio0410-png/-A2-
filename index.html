@@ -1,873 +1,435 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>成本計算系統</title>
-<style>
-  :root {
-    --ink: #1a1f2e;
-    --ink-soft: #4a5068;
-    --ink-muted: #8a90a8;
-    --bg: #f7f8fc;
-    --surface: #ffffff;
-    --surface-alt: #f0f2f8;
-    --border: #dde1ef;
-    --accent: #2d6ef7;
-    --accent-light: #e8efff;
-    --accent-dark: #1a4dc4;
-    --green: #1a9e6b;
-    --green-light: #e3f7f0;
-    --amber: #d97c12;
-    --amber-light: #fff4e3;
-    --red: #d93b3b;
-    --red-light: #ffeaea;
-    --radius: 10px;
-    --shadow: 0 2px 12px rgba(26,31,46,0.08);
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: 'PingFang TC', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
-    background: var(--bg);
-    color: var(--ink);
-    min-height: 100vh;
-    font-size: 15px;
-    line-height: 1.6;
-  }
-
-  header {
-    background: var(--ink);
-    color: white;
-    padding: 20px 32px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-  header .logo {
-    width: 36px; height: 36px;
-    background: var(--accent);
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-  }
-  header h1 { font-size: 20px; font-weight: 700; letter-spacing: 1px; }
-  header p { font-size: 13px; color: #8a90b8; margin-top: 2px; }
-
-  .container {
-    max-width: 860px;
-    margin: 0 auto;
-    padding: 32px 20px 60px;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-  }
-
-  .section-card {
-    background: var(--surface);
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow);
-    overflow: hidden;
-  }
-
-  .section-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 18px 24px;
-    background: var(--ink);
-    color: white;
-    cursor: pointer;
-    user-select: none;
-  }
-  .section-header .badge {
-    background: var(--accent);
-    border-radius: 6px;
-    padding: 3px 10px;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 1px;
-  }
-  .section-header h2 { font-size: 16px; font-weight: 600; flex: 1; }
-  .section-header .chevron {
-    font-size: 18px;
-    transition: transform 0.2s;
-    color: var(--ink-muted);
-  }
-  .section-header.collapsed .chevron { transform: rotate(-90deg); }
-
-  .section-body {
-    padding: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-  }
-  .section-body.hidden { display: none; }
-
-  .row { display: flex; gap: 16px; flex-wrap: wrap; }
-  .field { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 160px; }
-  .field.narrow { max-width: 200px; }
-  .field label {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--ink-soft);
-    display: flex; align-items: center; gap: 5px;
-  }
-  .field label .opt {
-    font-size: 11px;
-    background: var(--surface-alt);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 1px 5px;
-    color: var(--ink-muted);
-    font-weight: 400;
-  }
-  input, select {
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    padding: 9px 12px;
-    font-size: 14px;
-    color: var(--ink);
-    background: var(--surface);
-    transition: border-color 0.15s, box-shadow 0.15s;
-    font-family: inherit;
-    width: 100%;
-  }
-  input:focus, select:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-light);
-  }
-  input:disabled {
-    background: var(--surface-alt);
-    color: var(--ink-muted);
-    cursor: not-allowed;
-  }
-
-  .radio-group {
-    display: flex; gap: 10px; flex-wrap: wrap;
-  }
-  .radio-btn {
-    flex: 1; min-width: 100px;
-    padding: 10px 14px;
-    border: 2px solid var(--border);
-    border-radius: 8px;
-    cursor: pointer;
-    text-align: center;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--ink-soft);
-    transition: all 0.15s;
-    user-select: none;
-  }
-  .radio-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
-  .radio-btn.selected { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
-
-  .result-box {
-    background: var(--accent-light);
-    border: 1.5px solid var(--accent);
-    border-radius: 8px;
-    padding: 14px 18px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-  .result-box .label { font-size: 13px; font-weight: 600; color: var(--accent-dark); }
-  .result-box .value { font-size: 22px; font-weight: 800; color: var(--accent-dark); letter-spacing: 0.5px; }
-  .result-box .unit { font-size: 13px; color: var(--accent); }
-
-  .result-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 14px;
-  }
-  .result-item {
-    border-radius: 8px;
-    padding: 14px 16px;
-    border: 1px solid var(--border);
-  }
-  .result-item.accent { background: var(--accent-light); border-color: var(--accent); }
-  .result-item.green { background: var(--green-light); border-color: var(--green); }
-  .result-item.amber { background: var(--amber-light); border-color: var(--amber); }
-  .result-item .r-label { font-size: 12px; font-weight: 600; color: var(--ink-muted); margin-bottom: 4px; }
-  .result-item .r-val { font-size: 20px; font-weight: 800; color: var(--ink); }
-  .result-item .r-unit { font-size: 12px; color: var(--ink-muted); margin-top: 2px; }
-  .result-item.accent .r-val { color: var(--accent-dark); }
-  .result-item.green .r-val { color: var(--green); }
-  .result-item.amber .r-val { color: var(--amber); }
-
-  .divider {
-    border: none;
-    border-top: 1px solid var(--border);
-    margin: 4px 0;
-  }
-
-  .toggle-group { display: flex; gap: 10px; flex-wrap: wrap; }
-  .toggle-btn {
-    padding: 8px 16px;
-    border: 2px solid var(--border);
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--ink-soft);
-    background: var(--surface);
-    transition: all 0.15s;
-    user-select: none;
-  }
-  .toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .toggle-btn.on { border-color: var(--accent); color: white; background: var(--accent); }
-
-  .info-note {
-    font-size: 12px;
-    color: var(--ink-muted);
-    background: var(--surface-alt);
-    border-radius: 6px;
-    padding: 8px 12px;
-    border-left: 3px solid var(--border);
-  }
-
-  .calc-btn {
-    background: var(--accent);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 12px 28px;
-    font-size: 15px;
-    font-weight: 700;
-    cursor: pointer;
-    letter-spacing: 0.5px;
-    transition: background 0.15s, transform 0.1s;
-    align-self: flex-start;
-    font-family: inherit;
-  }
-  .calc-btn:hover { background: var(--accent-dark); transform: translateY(-1px); }
-  .calc-btn:active { transform: translateY(0); }
-
-  .section-subtitle {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--ink-muted);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 4px;
-  }
-
-  .conditional-block {
-    background: var(--surface-alt);
-    border: 1px dashed var(--border);
-    border-radius: 8px;
-    padding: 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
-
-  .or-divider {
-    display: flex; align-items: center; gap: 10px;
-    color: var(--ink-muted); font-size: 13px; font-weight: 600;
-  }
-  .or-divider::before, .or-divider::after {
-    content: ''; flex: 1; border-top: 1px solid var(--border);
-  }
-
-  @media (max-width: 600px) {
-    .container { padding: 16px 12px 40px; }
-    header { padding: 16px 18px; }
-    .section-body { padding: 16px; }
-    .result-item .r-val { font-size: 17px; }
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>成本計算 App (表格版)</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #007bff; margin-bottom: 20px; }
+        h2 { color: #333; border-left: 5px solid #007bff; padding-left: 10px; margin-top: 30px; font-size: 1.2em; }
+        
+        /* 表格排版樣式 */
+        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+        th, td { border: 1px solid #dee2e6; padding: 12px; vertical-align: middle; }
+        th { background-color: #f8f9fa; width: 35%; color: #495057; text-align: left; font-weight: bold; }
+        td { background-color: #ffffff; }
+        
+        input[type="number"], input[type="text"], select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
+        .inline-input { width: 70px !important; display: inline-block; margin-bottom: 5px;}
+        .hidden-row { display: none; }
+        .result-row th, .result-row td { background-color: #e9f5ff; color: #0056b3; font-weight: bold; font-size: 1.1em; }
+        
+        /* 按鈕樣式 */
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+        button { flex: 1; min-width: 200px; color: white; border: none; padding: 15px 20px; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold; }
+        .btn-calc { background-color: #007bff; }
+        .btn-calc:hover { background-color: #0056b3; }
+        .btn-save { background-color: #28a745; }
+        .btn-save:hover { background-color: #218838; }
+        .btn-export { background-color: #17a2b8; }
+        .btn-export:hover { background-color: #138496; }
+        .btn-delete { background-color: #dc3545; padding: 5px 10px; font-size: 12px; width: auto; min-width: auto; margin-top: 5px;}
+        .btn-delete:hover { background-color: #c82333; }
+        
+        ul.history-list { list-style-type: none; padding: 0; }
+        ul.history-list li { background: #f8f9fa; margin-bottom: 10px; padding: 15px; border-radius: 5px; border: 1px solid #ddd; position: relative;}
+        .history-date { font-size: 12px; color: #888; margin-bottom: 5px;}
+    </style>
 </head>
 <body>
 
-<header>
-  <div class="logo">💹</div>
-  <div>
-    <h1>成本計算系統</h1>
-    <p>原料 → 加工品 → 含稅成本 → 毛利</p>
-  </div>
-</header>
-
 <div class="container">
+    <h1>📊 成本計算 App</h1>
 
-  <!-- PART 1 -->
-  <div class="section-card">
-    <div class="section-header" onclick="toggleSection('s1')">
-      <span class="badge">第一部分</span>
-      <h2>原料成本</h2>
-      <span class="chevron" id="s1-chevron">▾</span>
+    <!-- 第一部分：原料 -->
+    <h2>第一部分：原料</h2>
+    <table>
+        <tr>
+            <th>原料採購性質</th>
+            <td>
+                <select id="purchaseType" onchange="togglePurchaseFields()">
+                    <option value="domestic">1. 國內採購 / 3. 在庫品</option>
+                    <option value="foreign">2. 國外採購</option>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <th>原料採購價格<br><small style="color:#666; font-weight:normal;">(國內採購請填台幣金額)</small></th>
+            <td><input type="number" id="rawMaterialPrice" value="0"></td>
+        </tr>
+        <tr class="foreign-row hidden-row">
+            <th>幣別選擇 <small>(輔助參考)</small></th>
+            <td>
+                <select id="currency">
+                    <option value="USD">美金 (USD)</option>
+                    <option value="EUR">歐元 (EUR)</option>
+                    <option value="JPY">日圓 (JPY)</option>
+                    <option value="CNY">人民幣 (CNY)</option>
+                    <option value="other">其他</option>
+                </select>
+            </td>
+        </tr>
+        <tr class="foreign-row hidden-row">
+            <th>匯率 <small>(請參考海關三旬匯率)</small></th>
+            <td><input type="number" id="exchangeRate" value="1" step="0.001"></td>
+        </tr>
+        <tr class="foreign-row hidden-row">
+            <th>關稅 (%) <small>(請參考關港貿單一窗口)</small></th>
+            <td><input type="number" id="tariffRate" value="0" step="0.1"></td>
+        </tr>
+        <tr class="foreign-row hidden-row">
+            <th>雜費 (台幣)<br><small style="color:#666; font-weight:normal;">(自動計算: 採購未稅價的 2%)</small></th>
+            <td><input type="number" id="miscFees" value="0" readonly style="background-color: #e9ecef; cursor: not-allowed;" title="系統自動計算 (採購費用的2%)"></td>
+        </tr>
+        <tr class="result-row">
+            <th>原料成本結果 (台幣)</th>
+            <td id="part1Result">0 元</td>
+        </tr>
+    </table>
+
+    <!-- 第二部分：加工品 -->
+    <h2>第二部分：加工品</h2>
+    <table>
+        <tr>
+            <th>是否為加工品？</th>
+            <td>
+                <select id="isProcessed" onchange="toggleProcessedFields()">
+                    <option value="no">否 (維持原料計算)</option>
+                    <option value="yes">是 (進入加工品計算)</option>
+                </select>
+            </td>
+        </tr>
+        <tr class="processed-row hidden-row">
+            <th>欄位1. 加工品名稱</th>
+            <td><input type="text" id="processedName" placeholder="請輸入加工品名稱"></td>
+        </tr>
+        <tr class="processed-row hidden-row">
+            <th>欄位A~E. 損耗流失率 (%)<br><small style="color:#666; font-weight:normal;">(非必填)</small></th>
+            <td style="line-height: 2;">
+                A. 解凍: <input type="number" id="lossA" value="0" class="inline-input"> % &nbsp;
+                B. 鋸台: <input type="number" id="lossB" value="0" class="inline-input"> % <br>
+                C. 贈送: <input type="number" id="lossC" value="0" class="inline-input"> % &nbsp;
+                D. 凍結: <input type="number" id="lossD" value="0" class="inline-input"> % <br>
+                E. 拌炒: <input type="number" id="lossE" value="0" class="inline-input"> %
+            </td>
+        </tr>
+        <tr class="processed-row hidden-row">
+            <th>商品類型選擇</th>
+            <td>
+                <select id="productType" onchange="toggleProductTypeFields()">
+                    <option value="normal">一般加工品</option>
+                    <option value="ice">包冰商品</option>
+                    <option value="breaded">裹粉商品</option>
+                </select>
+            </td>
+        </tr>
+        <tr class="ice-row hidden-row">
+            <th>欄位H. 包冰率 (%)</th>
+            <td><input type="number" id="iceRate" value="0"></td>
+        </tr>
+        <tr class="breaded-row hidden-row">
+            <th>欄位I. 裹粉率 (%)</th>
+            <td><input type="number" id="breadingRate" value="0"></td>
+        </tr>
+        <tr class="processed-row hidden-row">
+            <th>欄位J. 計價方式</th>
+            <td>
+                <select id="pricingMethod" onchange="togglePricingFields()">
+                    <option value="j1">J1. 公斤計價</option>
+                    <option value="j2">J2. 以包計價</option>
+                    <option value="j3">J3. 以件計價</option>
+                </select>
+            </td>
+        </tr>
+        <tr class="bag-row hidden-row">
+            <th>單包重量 (公斤/包)</th>
+            <td><input type="number" id="weightPerBag" value="1"></td>
+        </tr>
+        <tr class="piece-row hidden-row">
+            <th>單件重量 (公斤/件)</th>
+            <td><input type="number" id="weightPerPiece" value="1"></td>
+        </tr>
+        <tr class="processed-row hidden-row">
+            <th>欄位K. 轉播價<br><small style="color:#666; font-weight:normal;">(工廠直工+包材費)</small></th>
+            <td><input type="number" id="transferPrice" value="0"></td>
+        </tr>
+        <tr class="result-row processed-row hidden-row">
+            <th>欄位L. 加工品成本 (未稅)</th>
+            <td id="part2Result">0 元</td>
+        </tr>
+    </table>
+
+    <!-- 第三部分：含稅與毛利 -->
+    <h2>第三部分：含稅成本與毛利估算</h2>
+    <table>
+        <tr class="result-row">
+            <th>欄位M. 含稅成本</th>
+            <td id="taxedCostResult">0 元</td>
+        </tr>
+        <tr>
+            <th>計算模式選擇</th>
+            <td>
+                <select id="calcMode" onchange="toggleCalcMode()">
+                    <option value="marginToPrice">輸入毛利率反推售價 (欄位N)</option>
+                    <option value="priceToMargin">輸入售價反推毛利率 (欄位O)</option>
+                </select>
+            </td>
+        </tr>
+        <tr class="margin-row">
+            <th>目標毛利率 (%)</th>
+            <td><input type="number" id="targetMargin" value="0"></td>
+        </tr>
+        <tr class="price-row hidden-row">
+            <th>實際售價 (含稅)</th>
+            <td><input type="number" id="targetPrice" value="0"></td>
+        </tr>
+        <tr class="result-row" style="background-color: #d4edda; color: #155724;">
+            <th>最終估算結果</th>
+            <td id="finalResult">請點擊下方開始計算。</td>
+        </tr>
+    </table>
+
+    <!-- 操作按鈕區塊 -->
+    <div class="btn-group">
+        <button class="btn-calc" onclick="calculateAll()">⚡ 開始計算</button>
+        <button class="btn-save" onclick="saveRecord()">💾 儲存計算紀錄</button>
+        <button class="btn-export" onclick="exportToExcel()">📊 匯出 Excel (CSV)</button>
     </div>
-    <div class="section-body" id="s1-body">
-      <div class="row">
-        <div class="field">
-          <label>原料名稱</label>
-          <input type="text" id="material-name" placeholder="例：挪威鮭魚、白蝦仁">
-        </div>
-      </div>
-      <hr class="divider">
-      <div>
-        <div class="section-subtitle">採購性質</div>
-        <div class="radio-group" id="purchase-type-group">
-          <div class="radio-btn selected" data-val="domestic" onclick="setPurchaseType('domestic')">國內採購</div>
-          <div class="radio-btn" data-val="foreign" onclick="setPurchaseType('foreign')">國外採購</div>
-          <div class="radio-btn" data-val="stock" onclick="setPurchaseType('stock')">在庫品</div>
-        </div>
-      </div>
 
-      <!-- Domestic / Stock -->
-      <div id="domestic-fields">
-        <div class="row">
-          <div class="field">
-            <label>採購價格（台幣）</label>
-            <input type="number" id="domestic-price" placeholder="例：500" min="0" step="0.01" oninput="calcPart1()">
-          </div>
-          <div class="field narrow">
-            <label>單位</label>
-            <select id="domestic-unit" onchange="calcPart1()">
-              <option value="kg">元 / 公斤</option>
-              <option value="piece">元 / 件</option>
-              <option value="pack">元 / 包</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- Foreign -->
-      <div id="foreign-fields" style="display:none">
-        <div class="row">
-          <div class="field narrow">
-            <label>幣別</label>
-            <select id="currency" onchange="updateCurrencyHint(); calcPart1()">
-              <option value="USD">美元 USD</option>
-              <option value="JPY">日圓 JPY</option>
-              <option value="EUR">歐元 EUR</option>
-              <option value="CNY">人民幣 CNY</option>
-              <option value="AUD">澳幣 AUD</option>
-              <option value="GBP">英鎊 GBP</option>
-              <option value="KRW">韓圓 KRW</option>
-              <option value="THB">泰銖 THB</option>
-              <option value="VND">越南盾 VND</option>
-              <option value="OTHER">其他</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>原料採購價格（外幣）</label>
-            <input type="number" id="foreign-price" placeholder="例：10.5" min="0" step="0.001" oninput="calcPart1()">
-          </div>
-          <div class="field narrow">
-            <label>採購單位</label>
-            <select id="foreign-unit" onchange="calcPart1()">
-              <option value="kg">/ 公斤</option>
-              <option value="piece">/ 件</option>
-              <option value="pack">/ 包</option>
-            </select>
-          </div>
-        </div>
-        <div class="row">
-          <div class="field">
-            <label>匯率（台幣兌換1外幣）
-              <span id="currency-hint" style="font-size:11px; color:var(--amber); font-weight:400"></span>
-            </label>
-            <input type="number" id="exchange-rate" placeholder="例：31.5（請參照海關三旬匯率）" min="0" step="0.0001" oninput="calcPart1()">
-          </div>
-          <div class="field">
-            <label>進口關稅（%）</label>
-            <input type="number" id="import-duty" placeholder="例：5（請參照關港貿單一窗口）" min="0" step="0.01" oninput="calcPart1()">
-          </div>
-          <div class="field">
-            <label>雜費（台幣）<span class="opt">選填</span></label>
-            <input type="number" id="misc-fee" placeholder="運費、報關費等" min="0" step="0.01" oninput="calcPart1()">
-          </div>
-        </div>
-        <div class="info-note">
-          計算公式：原料 × (1 + 匯率) × (1 + 進口關稅%) + 雜費 → 換算為台幣
-        </div>
-      </div>
-
-      <div class="result-box" id="part1-result" style="display:none">
-        <div>
-          <div class="label">原料成本（台幣）</div>
-          <div class="r-unit" id="part1-formula" style="font-size:12px; color:var(--accent); margin-top:2px"></div>
-        </div>
-        <div style="text-align:right">
-          <div class="value" id="part1-value">—</div>
-          <div class="unit" id="part1-unit">元 / 公斤</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- PART 2 -->
-  <div class="section-card">
-    <div class="section-header" onclick="toggleSection('s2')">
-      <span class="badge">第二部分</span>
-      <h2>加工品成本</h2>
-      <span class="chevron" id="s2-chevron">▾</span>
-    </div>
-    <div class="section-body" id="s2-body">
-
-      <div>
-        <div class="section-subtitle">是否為加工品？</div>
-        <div class="toggle-group">
-          <div class="toggle-btn on" id="process-yes-btn" onclick="setProcessed(true)">是加工品</div>
-          <div class="toggle-btn" id="process-no-btn" onclick="setProcessed(false)">否（直接使用原料成本）</div>
-        </div>
-      </div>
-
-      <div id="process-fields">
-        <div class="row">
-          <div class="field">
-            <label>加工品名稱</label>
-            <input type="text" id="product-name" placeholder="例：急凍鱈魚排">
-          </div>
-        </div>
-
-        <hr class="divider">
-
-        <div class="section-subtitle">損耗設定（非必填）</div>
-        <div class="row">
-          <div class="field">
-            <label>A. 解凍流失 <span class="opt">選填</span></label>
-            <input type="number" id="loss-a" placeholder="%" min="0" max="100" step="0.01" oninput="calcPart2()">
-          </div>
-          <div class="field">
-            <label>B. 鋸台損耗 <span class="opt">選填</span></label>
-            <input type="number" id="loss-b" placeholder="%" min="0" max="100" step="0.01" oninput="calcPart2()">
-          </div>
-          <div class="field">
-            <label>C. 贈送值 <span class="opt">選填</span></label>
-            <input type="number" id="loss-c" placeholder="%" min="0" max="100" step="0.01" oninput="calcPart2()">
-          </div>
-          <div class="field">
-            <label>D. 凍結流失 <span class="opt">選填</span></label>
-            <input type="number" id="loss-d" placeholder="%" min="0" max="100" step="0.01" oninput="calcPart2()">
-          </div>
-          <div class="field">
-            <label>E. 拌炒流失 <span class="opt">選填</span></label>
-            <input type="number" id="loss-e" placeholder="%" min="0" max="100" step="0.01" oninput="calcPart2()">
-          </div>
-        </div>
-
-        <div class="result-grid" id="process-interim">
-          <div class="result-item">
-            <div class="r-label">F. 製成率</div>
-            <div class="r-val" id="yield-rate">100.00%</div>
-            <div class="r-unit">100% − 各項損耗合計</div>
-          </div>
-          <div class="result-item accent">
-            <div class="r-label">G. 成品原料（冰前）成本 #1</div>
-            <div class="r-val" id="cost-g">—</div>
-            <div class="r-unit" id="cost-g-unit">元 / 公斤</div>
-          </div>
-        </div>
-
-        <hr class="divider">
-        <div class="section-subtitle">包冰 / 裹粉設定</div>
-
-        <div class="row">
-          <div class="field narrow">
-            <label>商品類型</label>
-            <select id="product-type" onchange="toggleProductType(); calcPart2()">
-              <option value="none">一般（無包冰/裹粉）</option>
-              <option value="ice">包冰商品</option>
-              <option value="coating">裹粉商品</option>
-            </select>
-          </div>
-        </div>
-
-        <div id="ice-field" style="display:none">
-          <div class="row">
-            <div class="field narrow">
-              <label>H. 包冰率 %</label>
-              <input type="number" id="ice-rate" placeholder="例：20" min="0" max="100" step="0.01" oninput="calcPart2()">
-            </div>
-          </div>
-          <div class="info-note">成品原料（冰後）成本 #2 = 成品原料（冰前）成本 × (1 − 包冰率%)</div>
-        </div>
-
-        <div id="coating-field" style="display:none">
-          <div class="row">
-            <div class="field narrow">
-              <label>I. 裹粉率 %</label>
-              <input type="number" id="coating-rate" placeholder="例：15" min="0" max="100" step="0.01" oninput="calcPart2()">
-            </div>
-          </div>
-          <div class="info-note">成品成本 = 原料（冰前）成本 × (1 − 裹粉率%)</div>
-        </div>
-
-        <hr class="divider">
-        <div class="section-subtitle">計價方式</div>
-
-        <div class="radio-group" id="pricing-group">
-          <div class="radio-btn selected" data-val="kg" onclick="setPricing('kg')">J1．公斤計價</div>
-          <div class="radio-btn" data-val="pack" onclick="setPricing('pack')">J2．以包計價</div>
-          <div class="radio-btn" data-val="piece" onclick="setPricing('piece')">J3．以件計價</div>
-        </div>
-
-        <div id="pack-field" style="display:none">
-          <div class="field narrow">
-            <label>單包重量（公斤）</label>
-            <input type="number" id="pack-weight" placeholder="例：1.5" min="0" step="0.001" oninput="calcPart2()">
-          </div>
-        </div>
-        <div id="piece-field" style="display:none">
-          <div class="field narrow">
-            <label>單件重量（公斤）</label>
-            <input type="number" id="piece-weight" placeholder="例：0.3" min="0" step="0.001" oninput="calcPart2()">
-          </div>
-        </div>
-
-        <hr class="divider">
-        <div class="field">
-          <label>K. 轉播價（工廠直工 + 包材費）<span class="opt">選填</span></label>
-          <input type="number" id="broadcast-price" placeholder="需與計價方式單位相符" min="0" step="0.01" oninput="calcPart2()">
-        </div>
-
-        <div class="result-grid" id="part2-results" style="display:none">
-          <div class="result-item accent">
-            <div class="r-label" id="cost-b-label">成品原料成本</div>
-            <div class="r-val" id="cost-b">—</div>
-            <div class="r-unit" id="cost-b-unit">元 / 公斤</div>
-          </div>
-          <div class="result-item">
-            <div class="r-label">K. 轉播價</div>
-            <div class="r-val" id="broadcast-display">0</div>
-            <div class="r-unit" id="broadcast-unit">元 / 公斤</div>
-          </div>
-          <div class="result-item green">
-            <div class="r-label">L. 加工品成本（未稅）</div>
-            <div class="r-val" id="cost-l">—</div>
-            <div class="r-unit" id="cost-l-unit">元 / 公斤</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Not processed -->
-      <div id="no-process-note" style="display:none">
-        <div class="info-note">不選擇加工品，直接使用第一部分原料成本進入第三部分計算。</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- PART 3 -->
-  <div class="section-card">
-    <div class="section-header" onclick="toggleSection('s3')">
-      <span class="badge">第三部分</span>
-      <h2>含稅成本與毛利計算</h2>
-      <span class="chevron" id="s3-chevron">▾</span>
-    </div>
-    <div class="section-body" id="s3-body">
-
-      <div class="result-item" id="pretax-display">
-        <div class="r-label">帶入未稅成本（來自上方計算）</div>
-        <div class="r-val" id="pretax-val">—</div>
-        <div class="r-unit" id="pretax-unit">元 / 公斤</div>
-      </div>
-
-      <div class="result-item accent" id="taxed-display">
-        <div class="r-label">M. 含稅成本（未稅 × 1.05）</div>
-        <div class="r-val" id="taxed-val">—</div>
-        <div class="r-unit" id="taxed-unit">元 / 公斤</div>
-      </div>
-
-      <hr class="divider">
-
-      <!-- N: gross margin → price -->
-      <div>
-        <div class="section-subtitle">N. 毛利率反推售價</div>
-        <div class="row">
-          <div class="field narrow">
-            <label>目標毛利率 %</label>
-            <input type="number" id="gm-rate" placeholder="例：30" min="0" max="99.99" step="0.01" oninput="calcPart3N()">
-          </div>
-          <div class="field" style="justify-content:flex-end; padding-bottom:2px">
-            <label style="visibility:hidden">_</label>
-            <div class="result-item green" id="price-n" style="padding:10px 14px">
-              <div class="r-label">建議售價（含稅）</div>
-              <div class="r-val" id="price-n-val">—</div>
-              <div class="r-unit" id="price-n-unit">元 / 公斤</div>
-            </div>
-          </div>
-        </div>
-        <div class="info-note">公式：含稅成本 ÷ (1 − 毛利率%)</div>
-      </div>
-
-      <div class="or-divider">或</div>
-
-      <!-- O: price → gross margin -->
-      <div>
-        <div class="section-subtitle">O. 售價反推毛利率</div>
-        <div class="row">
-          <div class="field narrow">
-            <label>售價（含稅）</label>
-            <input type="number" id="sell-price" placeholder="例：380" min="0" step="0.01" oninput="calcPart3O()">
-          </div>
-          <div class="field" style="justify-content:flex-end; padding-bottom:2px">
-            <label style="visibility:hidden">_</label>
-            <div class="result-item amber" id="gm-o" style="padding:10px 14px">
-              <div class="r-label">實際毛利率</div>
-              <div class="r-val" id="gm-o-val">—</div>
-              <div class="r-unit">%</div>
-            </div>
-          </div>
-        </div>
-        <div class="info-note">公式：(售價 − 含稅成本) ÷ 售價</div>
-      </div>
-
-    </div>
-  </div>
-
-  <button class="calc-btn" onclick="resetAll()">🔄 重置全部</button>
-
+    <!-- 歷史紀錄區塊 -->
+    <h2>歷史紀錄</h2>
+    <div id="historyContainer">尚無紀錄。</div>
 </div>
 
 <script>
-// --- State ---
-let purchaseType = 'domestic';
-let isProcessed = true;
-let pricingMethod = 'kg';
-let part1Cost = 0;  // TWD per kg (or piece/pack based on unit)
-let part1Unit = 'kg';
-let pretaxCost = 0;
-let taxedCost = 0;
-let part2Unit = 'kg';
+    let latestCalcData = null;
 
-// --- Section toggle ---
-function toggleSection(id) {
-  const body = document.getElementById(id + '-body');
-  const chevron = document.getElementById(id + '-chevron');
-  const header = body.previousElementSibling;
-  if (body.classList.contains('hidden')) {
-    body.classList.remove('hidden');
-    header.classList.remove('collapsed');
-  } else {
-    body.classList.add('hidden');
-    header.classList.add('collapsed');
-  }
-}
-
-// --- Part 1 ---
-function setPurchaseType(type) {
-  purchaseType = type;
-  document.querySelectorAll('#purchase-type-group .radio-btn').forEach(b => {
-    b.classList.toggle('selected', b.dataset.val === type);
-  });
-  document.getElementById('domestic-fields').style.display = (type !== 'foreign') ? '' : 'none';
-  document.getElementById('foreign-fields').style.display = (type === 'foreign') ? '' : 'none';
-  calcPart1();
-}
-
-function updateCurrencyHint() {
-  const hints = { USD:'≈ 32.5 TWD', JPY:'≈ 0.22 TWD', EUR:'≈ 35.8 TWD', CNY:'≈ 4.5 TWD', AUD:'≈ 21.5 TWD', GBP:'≈ 41.2 TWD', KRW:'≈ 0.024 TWD', THB:'≈ 0.91 TWD', VND:'≈ 0.0013 TWD' };
-  const cur = document.getElementById('currency').value;
-  document.getElementById('currency-hint').textContent = hints[cur] ? '參考：' + hints[cur] : '';
-}
-
-function calcPart1() {
-  const resultBox = document.getElementById('part1-result');
-  let cost = 0;
-  let unitLabel = '';
-
-  if (purchaseType === 'foreign') {
-    const fp = parseFloat(document.getElementById('foreign-price').value) || 0;
-    const er = parseFloat(document.getElementById('exchange-rate').value) || 0;
-    const duty = parseFloat(document.getElementById('import-duty').value) || 0;
-    const misc = parseFloat(document.getElementById('misc-fee').value) || 0;
-    const fuVal = document.getElementById('foreign-unit').value;
-    if (fp > 0 && er > 0) {
-      cost = fp * (1 + er) * (1 + duty / 100) + misc;
-      document.getElementById('part1-formula').textContent =
-        `${fp} × (1+${er}) × (1+${duty}%) + ${misc}`;
+    function toggleRows(className, show) {
+        document.querySelectorAll('.' + className).forEach(row => {
+            row.style.display = show ? 'table-row' : 'none';
+        });
     }
-    unitLabel = fuVal === 'kg' ? '元 / 公斤' : fuVal === 'pack' ? '元 / 包' : '元 / 件';
-    part1Unit = fuVal;
-  } else {
-    cost = parseFloat(document.getElementById('domestic-price').value) || 0;
-    const du = document.getElementById('domestic-unit').value;
-    unitLabel = du === 'kg' ? '元 / 公斤' : du === 'pack' ? '元 / 包' : '元 / 件';
-    part1Unit = du;
-    document.getElementById('part1-formula').textContent = '';
-  }
 
-  part1Cost = cost;
-  if (cost > 0) {
-    resultBox.style.display = 'flex';
-    document.getElementById('part1-value').textContent = cost.toFixed(2);
-    document.getElementById('part1-unit').textContent = unitLabel;
-  } else {
-    resultBox.style.display = 'none';
-  }
-  calcPart2();
-}
+    function togglePurchaseFields() {
+        let isForeign = document.getElementById('purchaseType').value === 'foreign';
+        toggleRows('foreign-row', isForeign);
+    }
+    
+    function toggleProcessedFields() {
+        let isProc = document.getElementById('isProcessed').value === 'yes';
+        toggleRows('processed-row', isProc);
+        if(isProc) {
+            toggleProductTypeFields();
+            togglePricingFields();
+        } else {
+            toggleRows('ice-row', false);
+            toggleRows('breaded-row', false);
+            toggleRows('bag-row', false);
+            toggleRows('piece-row', false);
+        }
+    }
 
-// --- Part 2 ---
-function setProcessed(val) {
-  isProcessed = val;
-  document.getElementById('process-yes-btn').classList.toggle('on', val);
-  document.getElementById('process-no-btn').classList.toggle('on', !val);
-  document.getElementById('process-fields').style.display = val ? '' : 'none';
-  document.getElementById('no-process-note').style.display = val ? 'none' : '';
-  calcPart2();
-}
+    function toggleProductTypeFields() {
+        let type = document.getElementById('productType').value;
+        toggleRows('ice-row', type === 'ice');
+        toggleRows('breaded-row', type === 'breaded');
+    }
 
-function toggleProductType() {
-  const t = document.getElementById('product-type').value;
-  document.getElementById('ice-field').style.display = t === 'ice' ? '' : 'none';
-  document.getElementById('coating-field').style.display = t === 'coating' ? '' : 'none';
-}
+    function togglePricingFields() {
+        let method = document.getElementById('pricingMethod').value;
+        toggleRows('bag-row', method === 'j2');
+        toggleRows('piece-row', method === 'j3');
+    }
 
-function setPricing(method) {
-  pricingMethod = method;
-  document.querySelectorAll('#pricing-group .radio-btn').forEach(b => {
-    b.classList.toggle('selected', b.dataset.val === method);
-  });
-  document.getElementById('pack-field').style.display = method === 'pack' ? '' : 'none';
-  document.getElementById('piece-field').style.display = method === 'piece' ? '' : 'none';
-  calcPart2();
-}
+    function toggleCalcMode() {
+        let mode = document.getElementById('calcMode').value;
+        toggleRows('margin-row', mode === 'marginToPrice');
+        toggleRows('price-row', mode === 'priceToMargin');
+    }
 
-function calcPart2() {
-  if (!isProcessed) {
-    // pass through
-    pretaxCost = part1Cost;
-    part2Unit = part1Unit;
-    updatePart3();
-    return;
-  }
+    function calculateAll() {
+        // 第一部分計算
+        let pType = document.getElementById('purchaseType').value;
+        let rawPrice = parseFloat(document.getElementById('rawMaterialPrice').value) || 0;
+        let part1Cost = 0;
 
-  const la = parseFloat(document.getElementById('loss-a').value) || 0;
-  const lb = parseFloat(document.getElementById('loss-b').value) || 0;
-  const lc = parseFloat(document.getElementById('loss-c').value) || 0;
-  const ld = parseFloat(document.getElementById('loss-d').value) || 0;
-  const le = parseFloat(document.getElementById('loss-e').value) || 0;
-  const totalLoss = la + lb + lc + ld + le;
-  const yieldRate = Math.max(0, 100 - totalLoss) / 100;
+        if (pType === 'foreign') {
+            let exRate = parseFloat(document.getElementById('exchangeRate').value) || 1;
+            let tariff = parseFloat(document.getElementById('tariffRate').value) || 0;
+            
+            // 計算：採購費用(未稅) = 原料 * 匯率
+            let purchaseCostUntaxed = rawPrice * exRate;
+            
+            // 計算：雜費 = 採購費用(未稅) * 0.02
+            let misc = purchaseCostUntaxed * 0.02;
+            
+            // 自動將算出的雜費顯示在輸入框上
+            document.getElementById('miscFees').value = misc.toFixed(2);
 
-  document.getElementById('yield-rate').textContent = (yieldRate * 100).toFixed(2) + '%';
+            // 更新為您指定的新公式：原料 * 匯率 * (1 + 進口關稅) + 雜費
+            part1Cost = purchaseCostUntaxed * (1 + (tariff / 100)) + misc;
+        } else {
+            document.getElementById('miscFees').value = "0"; // 國內採購無此雜費
+            part1Cost = rawPrice;
+        }
+        document.getElementById('part1Result').innerText = `${part1Cost.toFixed(2)} 元`;
 
-  // G
-  let costG = 0;
-  if (part1Cost > 0 && yieldRate > 0) {
-    costG = part1Cost / yieldRate;
-  }
-  document.getElementById('cost-g').textContent = costG > 0 ? costG.toFixed(2) : '—';
-  document.getElementById('cost-g-unit').textContent = part1Unit === 'kg' ? '元 / 公斤' : part1Unit === 'pack' ? '元 / 包' : '元 / 件';
+        // 第二部分計算
+        let isProcessed = document.getElementById('isProcessed').value;
+        let finalUntaxedCost = part1Cost;
+        let processNameStr = isProcessed === 'yes' ? (document.getElementById('processedName').value || "未命名加工品") : "未加工原料";
+        let unitText = "元";
 
-  // B/C based on product type
-  const ptype = document.getElementById('product-type').value;
-  let costB = costG;
-  let bLabel = '成品原料成本';
-  let bUnit = part1Unit === 'kg' ? '元 / 公斤' : part1Unit === 'pack' ? '元 / 包' : '元 / 件';
+        if (isProcessed === 'yes') {
+            let lossA = parseFloat(document.getElementById('lossA').value) || 0;
+            let lossB = parseFloat(document.getElementById('lossB').value) || 0;
+            let lossC = parseFloat(document.getElementById('lossC').value) || 0;
+            let lossD = parseFloat(document.getElementById('lossD').value) || 0;
+            let lossE = parseFloat(document.getElementById('lossE').value) || 0;
+            
+            let yieldRate = 100 - (lossA + lossB + lossC + lossD + lossE);
+            if (yieldRate <= 0) yieldRate = 1; 
+            
+            let costG = part1Cost / (yieldRate / 100);
+            
+            let prodType = document.getElementById('productType').value;
+            let finishedMaterialCost = costG;
+            
+            if (prodType === 'ice') {
+                let iceRate = parseFloat(document.getElementById('iceRate').value) || 0;
+                finishedMaterialCost = costG * (1 - (iceRate / 100));
+            } else if (prodType === 'breaded') {
+                let breadRate = parseFloat(document.getElementById('breadingRate').value) || 0;
+                finishedMaterialCost = costG * (1 - (breadRate / 100));
+            }
 
-  if (ptype === 'ice') {
-    const iceRate = parseFloat(document.getElementById('ice-rate').value) || 0;
-    costB = costG * (1 - iceRate / 100);
-    bLabel = '成品原料（冰後）成本 #2';
-    document.getElementById('cost-b-label').textContent = bLabel;
-  } else if (ptype === 'coating') {
-    const coatRate = parseFloat(document.getElementById('coating-rate').value) || 0;
-    costB = costG * (1 - coatRate / 100);
-    bLabel = '成品成本（裹粉後）';
-    document.getElementById('cost-b-label').textContent = bLabel;
-  } else {
-    document.getElementById('cost-b-label').textContent = '成品原料成本';
-  }
+            let pricingMethod = document.getElementById('pricingMethod').value;
+            let unitCost = finishedMaterialCost;
+            if (pricingMethod === 'j2') {
+                let weightBag = parseFloat(document.getElementById('weightPerBag').value) || 1;
+                unitCost = finishedMaterialCost * weightBag;
+                unitText = "元/包";
+            } else if (pricingMethod === 'j3') {
+                let weightPiece = parseFloat(document.getElementById('weightPerPiece').value) || 1;
+                unitCost = finishedMaterialCost * weightPiece;
+                unitText = "元/件";
+            } else {
+                unitText = "元/公斤";
+            }
 
-  // J pricing
-  let finalCost = costB;
-  let finalUnit = '元 / 公斤';
-  if (pricingMethod === 'pack') {
-    const pw = parseFloat(document.getElementById('pack-weight').value) || 0;
-    if (pw > 0) { finalCost = costB * pw; finalUnit = '元 / 包'; }
-  } else if (pricingMethod === 'piece') {
-    const piw = parseFloat(document.getElementById('piece-weight').value) || 0;
-    if (piw > 0) { finalCost = costB * piw; finalUnit = '元 / 件'; }
-  }
+            let transferPrice = parseFloat(document.getElementById('transferPrice').value) || 0;
+            finalUntaxedCost = unitCost + transferPrice;
+            document.getElementById('part2Result').innerText = `${finalUntaxedCost.toFixed(2)} ${unitText}`;
+        }
 
-  const broadcast = parseFloat(document.getElementById('broadcast-price').value) || 0;
-  const costL = finalCost + broadcast;
+        // 第三部分計算
+        let taxedCost = finalUntaxedCost * 1.05;
+        document.getElementById('taxedCostResult').innerText = `${taxedCost.toFixed(2)} ${unitText}`;
 
-  const show = costG > 0;
-  document.getElementById('part2-results').style.display = show ? 'grid' : 'none';
-  if (show) {
-    document.getElementById('cost-b').textContent = costB.toFixed(2);
-    document.getElementById('cost-b-unit').textContent = bUnit;
-    document.getElementById('broadcast-display').textContent = broadcast.toFixed(2);
-    document.getElementById('broadcast-unit').textContent = finalUnit;
-    document.getElementById('cost-l').textContent = costL.toFixed(2);
-    document.getElementById('cost-l-unit').textContent = finalUnit;
-  }
+        let calcMode = document.getElementById('calcMode').value;
+        let finalResultText = "";
 
-  pretaxCost = costL;
-  part2Unit = finalUnit;
-  updatePart3();
-}
+        if (calcMode === 'marginToPrice') {
+            let margin = parseFloat(document.getElementById('targetMargin').value) || 0;
+            let recommendedPrice = taxedCost / (1 - (margin / 100));
+            finalResultText = `建議售價 (N): ${recommendedPrice.toFixed(2)} ${unitText}`;
+        } else {
+            let targetPrice = parseFloat(document.getElementById('targetPrice').value) || 0;
+            let actualMargin = ((targetPrice - taxedCost) / targetPrice) * 100;
+            finalResultText = `反推毛利率 (O): ${actualMargin.toFixed(2)} %`;
+        }
 
-// --- Part 3 ---
-function updatePart3() {
-  taxedCost = pretaxCost * 1.05;
-  const unit = isProcessed ? part2Unit : (part1Unit === 'kg' ? '元 / 公斤' : part1Unit === 'pack' ? '元 / 包' : '元 / 件');
+        document.getElementById('finalResult').innerText = finalResultText;
 
-  document.getElementById('pretax-val').textContent = pretaxCost > 0 ? pretaxCost.toFixed(2) : '—';
-  document.getElementById('pretax-unit').textContent = unit;
-  document.getElementById('taxed-val').textContent = taxedCost > 0 ? taxedCost.toFixed(2) : '—';
-  document.getElementById('taxed-unit').textContent = unit;
-  document.getElementById('price-n-unit').textContent = unit;
-  document.getElementById('gm-o').querySelector('.r-unit').textContent = '';
+        latestCalcData = {
+            name: processNameStr,
+            date: new Date().toLocaleString(),
+            untaxed: `${finalUntaxedCost.toFixed(2)} ${unitText}`,
+            taxed: `${taxedCost.toFixed(2)} ${unitText}`,
+            result: finalResultText
+        };
+    }
 
-  calcPart3N();
-  calcPart3O();
-}
+    function saveRecord() {
+        if (!latestCalcData) {
+            alert("請先點擊「⚡ 開始計算」產生結果後再儲存！");
+            return;
+        }
+        let history = JSON.parse(localStorage.getItem('costAppHistory')) || [];
+        history.unshift(latestCalcData);
+        localStorage.setItem('costAppHistory', JSON.stringify(history));
+        alert("✅ 紀錄已成功儲存！");
+        renderHistory();
+    }
 
-function calcPart3N() {
-  const gmRate = parseFloat(document.getElementById('gm-rate').value);
-  if (taxedCost > 0 && !isNaN(gmRate) && gmRate < 100) {
-    const price = taxedCost / (1 - gmRate / 100);
-    document.getElementById('price-n-val').textContent = price.toFixed(2);
-  } else {
-    document.getElementById('price-n-val').textContent = '—';
-  }
-}
+    function deleteRecord(index) {
+        let history = JSON.parse(localStorage.getItem('costAppHistory')) || [];
+        history.splice(index, 1);
+        localStorage.setItem('costAppHistory', JSON.stringify(history));
+        renderHistory();
+    }
 
-function calcPart3O() {
-  const sp = parseFloat(document.getElementById('sell-price').value);
-  if (taxedCost > 0 && !isNaN(sp) && sp > 0) {
-    const gm = (sp - taxedCost) / sp * 100;
-    document.getElementById('gm-o-val').textContent = gm.toFixed(2) + '%';
-    const el = document.getElementById('gm-o');
-    el.className = 'result-item ' + (gm >= 20 ? 'green' : gm >= 0 ? 'amber' : 'result-item');
-    if (gm < 0) el.style.background = 'var(--red-light)', el.style.borderColor = 'var(--red)';
-    else el.style.background = el.style.borderColor = '';
-  } else {
-    document.getElementById('gm-o-val').textContent = '—';
-  }
-}
+    function renderHistory() {
+        let history = JSON.parse(localStorage.getItem('costAppHistory')) || [];
+        let container = document.getElementById('historyContainer');
+        
+        if (history.length === 0) {
+            container.innerHTML = "尚無紀錄。";
+            return;
+        }
 
-function resetAll() {
-  if (!confirm('確定要重置所有欄位嗎？')) return;
-  document.querySelectorAll('input').forEach(i => { i.value = ''; });
-  document.querySelectorAll('select').forEach(s => { s.selectedIndex = 0; });
-  setPurchaseType('domestic');
-  setProcessed(true);
-  setPricing('kg');
-  toggleProductType();
-  document.getElementById('part1-result').style.display = 'none';
-  document.getElementById('part2-results').style.display = 'none';
-  document.getElementById('yield-rate').textContent = '100.00%';
-  document.getElementById('cost-g').textContent = '—';
-  document.getElementById('pretax-val').textContent = '—';
-  document.getElementById('taxed-val').textContent = '—';
-  document.getElementById('price-n-val').textContent = '—';
-  document.getElementById('gm-o-val').textContent = '—';
-  part1Cost = pretaxCost = taxedCost = 0;
-}
+        let html = '<ul class="history-list">';
+        history.forEach((item, index) => {
+            html += `
+                <li>
+                    <div class="history-date">${item.date}</div>
+                    <strong>品名：</strong>${item.name} <br>
+                    <strong>未稅成本：</strong>${item.untaxed} | <strong>含稅成本：</strong>${item.taxed} <br>
+                    <strong style="color:#155724;">${item.result}</strong>
+                    <br><button class="btn-delete" onclick="deleteRecord(${index})">刪除紀錄</button>
+                </li>
+            `;
+        });
+        html += '</ul>';
+        container.innerHTML = html;
+    }
 
-updateCurrencyHint();
+    function exportToExcel() {
+        let history = JSON.parse(localStorage.getItem('costAppHistory')) || [];
+        if (history.length === 0) {
+            alert("目前沒有任何歷史紀錄可以匯出！");
+            return;
+        }
+        let csvContent = "\uFEFF"; 
+        csvContent += "日期,加工品名稱,未稅成本,含稅成本,最終計算結果\n";
+
+        history.forEach(item => {
+            let date = item.date;
+            let name = item.name.replace(/,/g, "，");
+            let untaxed = item.untaxed.replace(/,/g, "");
+            let taxed = item.taxed.replace(/,/g, "");
+            let result = item.result.replace(/,/g, "，");
+            csvContent += `${date},${name},${untaxed},${taxed},${result}\n`;
+        });
+
+        let blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        let url = URL.createObjectURL(blob);
+        let link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", "成本計算歷史紀錄.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    window.onload = function() {
+        togglePurchaseFields();
+        toggleProcessedFields();
+        toggleCalcMode();
+        renderHistory();
+    };
 </script>
 </body>
 </html>
