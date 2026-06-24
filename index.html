@@ -454,8 +454,11 @@
               </a>
             </label>
             <input type="file" id="stock-excel-upload" accept=".xlsx,.xls" style="display:none" onchange="loadStockExcel(event)">
-            <div id="stock-excel-status" style="font-size:12px; color:var(--ink-muted); margin-top:4px; padding:7px 10px; border:1px dashed var(--border); border-radius:6px; min-height:32px; background:var(--surface-alt);">
-              尚未匯入，請先上傳在庫品成本 Excel 檔案
+            <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+              <div id="stock-excel-status" style="flex:1; font-size:12px; color:var(--ink-muted); padding:7px 10px; border:1px dashed var(--border); border-radius:6px; min-height:32px; background:var(--surface-alt);">
+                尚未匯入，請先上傳在庫品成本 Excel 檔案
+              </div>
+              <button id="stock-excel-clear-btn" onclick="clearExcelData('stock')" style="display:none; font-size:11px; padding:4px 10px; border:1.5px solid var(--red); border-radius:20px; background:#ffeaea; color:var(--red); font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">✕ 清除</button>
             </div>
           </div>
         </div>
@@ -581,8 +584,11 @@
               </a>
             </label>
             <input type="file" id="excel-upload" accept=".xlsx,.xls" style="display:none" onchange="loadExcel(event)">
-            <div id="excel-status" style="font-size:12px; color:var(--ink-muted); margin-top:4px; padding:7px 10px; border:1px dashed var(--border); border-radius:6px; min-height:32px; background:var(--surface-alt);">
-              尚未匯入，請先上傳轉播價 Excel 檔案
+            <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+              <div id="excel-status" style="flex:1; font-size:12px; color:var(--ink-muted); padding:7px 10px; border:1px dashed var(--border); border-radius:6px; min-height:32px; background:var(--surface-alt);">
+                尚未匯入，請先上傳轉播價 Excel 檔案
+              </div>
+              <button id="excel-clear-btn" onclick="clearExcelData('broadcast')" style="display:none; font-size:11px; padding:4px 10px; border:1.5px solid var(--red); border-radius:20px; background:#ffeaea; color:var(--red); font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">✕ 清除</button>
             </div>
           </div>
         </div>
@@ -1112,7 +1118,59 @@ function resetAll() {
 
 updateCurrencyHint();
 
-// --- Excel Import ---
+// --- 啟動時從 localStorage 還原 Excel 資料 ---
+loadFromLocalStorage('costapp_broadcast', 'excel-status', 'excel-clear-btn', function(map) {
+  broadcastPriceMap = map;
+});
+loadFromLocalStorage('costapp_stock', 'stock-excel-status', 'stock-excel-clear-btn', function(map) {
+  stockPriceMap = map;
+});
+
+// --- Excel Import (with localStorage) ---
+
+function saveTolocalStorage(key, map, filename, count) {
+  try {
+    localStorage.setItem(key, JSON.stringify({ map: map, filename: filename, count: count, savedAt: new Date().toLocaleString('zh-TW') }));
+  } catch(e) { console.warn('localStorage 儲存失敗', e); }
+}
+
+function loadFromLocalStorage(key, statusId, clearBtnId, onLoaded) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (saved && saved.map && saved.count > 0) {
+      onLoaded(saved.map);
+      const status = document.getElementById(statusId);
+      status.style.color = 'var(--green)';
+      status.textContent = '✓ 已還原 ' + saved.count + ' 筆資料（' + saved.filename + '）　上次更新：' + saved.savedAt;
+      const btn = document.getElementById(clearBtnId);
+      if (btn) btn.style.display = '';
+    }
+  } catch(e) { console.warn('localStorage 讀取失敗', e); }
+}
+
+function clearExcelData(type) {
+  if (!confirm('確定要清除已儲存的 Excel 資料嗎？')) return;
+  if (type === 'broadcast') {
+    broadcastPriceMap = {};
+    localStorage.removeItem('costapp_broadcast');
+    const s = document.getElementById('excel-status');
+    s.style.color = 'var(--ink-muted)';
+    s.textContent = '尚未匯入，請先上傳轉播價 Excel 檔案';
+    document.getElementById('excel-clear-btn').style.display = 'none';
+    document.getElementById('excel-upload').value = '';
+  } else {
+    stockPriceMap = {};
+    localStorage.removeItem('costapp_stock');
+    const s = document.getElementById('stock-excel-status');
+    s.style.color = 'var(--ink-muted)';
+    s.textContent = '尚未匯入，請先上傳在庫品成本 Excel 檔案';
+    document.getElementById('stock-excel-clear-btn').style.display = 'none';
+    document.getElementById('stock-excel-upload').value = '';
+  }
+}
+
 function loadExcel(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -1141,8 +1199,10 @@ function loadExcel(event) {
         }
       });
 
+      saveTolocalStorage('costapp_broadcast', broadcastPriceMap, file.name, count);
       status.style.color = 'var(--green)';
-      status.textContent = '✓ 已載入 ' + count + ' 筆轉播價資料（' + file.name + '）';
+      status.textContent = '✓ 已載入並儲存 ' + count + ' 筆轉播價資料（' + file.name + '）';
+      document.getElementById('excel-clear-btn').style.display = '';
       matchBroadcastPrice();
     } catch(err) {
       status.style.color = 'var(--red)';
@@ -1209,8 +1269,10 @@ function loadStockExcel(event) {
         }
       });
 
+      saveTolocalStorage('costapp_stock', stockPriceMap, file.name, count);
       status.style.color = 'var(--green)';
-      status.textContent = '✓ 已載入 ' + count + ' 筆在庫品資料（' + file.name + '）';
+      status.textContent = '✓ 已載入並儲存 ' + count + ' 筆在庫品資料（' + file.name + '）';
+      document.getElementById('stock-excel-clear-btn').style.display = '';
       matchStockPrice();
     } catch(err) {
       status.style.color = 'var(--red)';
