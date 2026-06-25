@@ -617,6 +617,14 @@
             <label>E. 拌炒流失 <span class="opt">選填</span></label>
             <input type="number" id="loss-e" placeholder="%" min="0" max="100" step="0.01" oninput="calcPart2()">
           </div>
+          <div class="field">
+            <label>正品率 % <span class="opt">選填</span></label>
+            <input type="number" id="grade-a-rate" placeholder="例：80" min="0" max="100" step="0.01" oninput="calcPart2()">
+          </div>
+          <div class="field">
+            <label>格外品率 % <span class="opt">選填</span></label>
+            <input type="number" id="grade-b-rate" placeholder="例：20" min="0" max="100" step="0.01" oninput="calcPart2()">
+          </div>
         </div>
 
         <div class="result-grid" id="process-interim">
@@ -630,6 +638,18 @@
             <div class="r-val" id="cost-g">—</div>
             <div class="r-unit" id="cost-g-unit">元 / 公斤</div>
             <div id="cost-g-formula" style="font-size:11px; color:var(--accent); margin-top:3px;"></div>
+          </div>
+          <div class="result-item" id="grade-a-result" style="display:none">
+            <div class="r-label">正品成本</div>
+            <div class="r-val" id="grade-a-cost">—</div>
+            <div class="r-unit" id="grade-a-unit">元 / 公斤</div>
+            <div id="grade-a-formula" style="font-size:11px; color:var(--ink-muted); margin-top:3px;"></div>
+          </div>
+          <div class="result-item" id="grade-b-result" style="display:none">
+            <div class="r-label">格外品成本</div>
+            <div class="r-val" id="grade-b-cost">—</div>
+            <div class="r-unit" id="grade-b-unit">元 / 公斤</div>
+            <div id="grade-b-formula" style="font-size:11px; color:var(--ink-muted); margin-top:3px;"></div>
           </div>
         </div>
 
@@ -808,7 +828,8 @@
 
   <div style="display:flex; gap:12px; flex-wrap:wrap;">
     <button class="calc-btn" onclick="resetAll()">🔄 重置全部</button>
-    <button class="calc-btn" onclick="exportPDF()" style="background:var(--green);">📄 匯出成本PDF</button>
+    <button class="calc-btn" onclick="exportPDF()" style="background:var(--green);">📄 匯出 PDF</button>
+    <button class="calc-btn" onclick="exportExcel()" style="background:var(--amber);">📊 匯出 Excel</button>
   </div>
 
 </div>
@@ -994,11 +1015,37 @@ function calcPart2() {
   if (part1Cost > 0 && yieldRate > 0) {
     costG = part1Cost / yieldRate;
   }
+  const gUnit = part1Unit === 'kg' ? '元 / 公斤' : part1Unit === 'pack' ? '元 / 包' : '元 / 件';
   document.getElementById('cost-g').textContent = costG > 0 ? costG.toFixed(2) : '—';
-  document.getElementById('cost-g-unit').textContent = part1Unit === 'kg' ? '元 / 公斤' : part1Unit === 'pack' ? '元 / 包' : '元 / 件';
+  document.getElementById('cost-g-unit').textContent = gUnit;
   document.getElementById('cost-g-formula').textContent = (part1Cost > 0 && yieldRate > 0)
     ? `原料成本 ${part1Cost.toFixed(2)} ÷ 製成率 ${(yieldRate*100).toFixed(2)}%`
     : '';
+
+  // 正品率 / 格外品率
+  const gradeARate = parseFloat(document.getElementById('grade-a-rate').value) || 0;
+  const gradeBRate = parseFloat(document.getElementById('grade-b-rate').value) || 0;
+  const gradeTotal = gradeARate + gradeBRate;
+
+  const gradeAEl = document.getElementById('grade-a-result');
+  const gradeBEl = document.getElementById('grade-b-result');
+
+  if (costG > 0 && gradeARate > 0) {
+    const gradeACost = gradeTotal > 0 ? costG * (gradeTotal / 100) / (gradeARate / 100) : costG;
+    document.getElementById('grade-a-cost').textContent = gradeACost.toFixed(2);
+    document.getElementById('grade-a-unit').textContent = gUnit;
+    document.getElementById('grade-a-formula').textContent = `G成本 ${costG.toFixed(2)} × 合計率${gradeTotal}% ÷ 正品率${gradeARate}%`;
+    gradeAEl.style.display = '';
+  } else { gradeAEl.style.display = 'none'; }
+
+  if (costG > 0 && gradeBRate > 0) {
+    const gradeACost2 = gradeTotal > 0 ? costG * (gradeTotal / 100) / (gradeARate / 100 || 1) : costG;
+    const gradeBCost = gradeTotal > 0 ? costG * (gradeTotal / 100) / (gradeBRate / 100) : costG;
+    document.getElementById('grade-b-cost').textContent = gradeBCost.toFixed(2);
+    document.getElementById('grade-b-unit').textContent = gUnit;
+    document.getElementById('grade-b-formula').textContent = `G成本 ${costG.toFixed(2)} × 合計率${gradeTotal}% ÷ 格外品率${gradeBRate}%`;
+    gradeBEl.style.display = '';
+  } else { gradeBEl.style.display = 'none'; }
 
   // B/C based on product type
   const ptype = document.getElementById('product-type').value;
@@ -1090,44 +1137,6 @@ function calcPart3O() {
   }
 }
 
-function resetAll() {
-  if (!confirm('確定要重置所有欄位嗎？')) return;
-  document.querySelectorAll('input').forEach(i => { i.value = ''; });
-  document.querySelectorAll('select').forEach(s => { s.selectedIndex = 0; });
-  setPurchaseType('domestic');
-  document.getElementById('stock-item-code').value = '';
-  document.getElementById('stock-price').value = '';
-  document.getElementById('stock-auto-badge').style.display = 'none';
-  document.getElementById('stock-excel-status').textContent = '尚未匯入，請先上傳在庫品成本 Excel 檔案';
-  stockPriceMap = {};
-  setProcessed(true);
-  setPricing('kg');
-  document.getElementById('pricing-unit-badge').style.display = 'none';
-  document.getElementById('pricing-unit-select').value = 'kg';
-  toggleProductType();
-  document.getElementById('part1-result').style.display = 'none';
-  document.getElementById('part2-results').style.display = 'none';
-  document.getElementById('yield-rate').textContent = '100.00%';
-  document.getElementById('cost-g').textContent = '—';
-  document.getElementById('pretax-val').textContent = '—';
-  document.getElementById('taxed-val').textContent = '—';
-  document.getElementById('price-n-val').textContent = '—';
-  document.getElementById('gm-o-val').textContent = '—';
-  part1Cost = pretaxCost = taxedCost = 0;
-}
-
-updateCurrencyHint();
-
-// --- 啟動時從 localStorage 還原 Excel 資料 ---
-loadFromLocalStorage('costapp_broadcast', 'excel-status', 'excel-clear-btn', function(map) {
-  broadcastPriceMap = map;
-});
-loadFromLocalStorage('costapp_stock', 'stock-excel-status', 'stock-excel-clear-btn', function(map) {
-  stockPriceMap = map;
-});
-
-// --- Excel Import (with localStorage) ---
-
 function saveTolocalStorage(key, map, filename, count) {
   try {
     localStorage.setItem(key, JSON.stringify({ map: map, filename: filename, count: count, savedAt: new Date().toLocaleString('zh-TW') }));
@@ -1149,6 +1158,48 @@ function loadFromLocalStorage(key, statusId, clearBtnId, onLoaded) {
     }
   } catch(e) { console.warn('localStorage 讀取失敗', e); }
 }
+
+
+function resetAll() {
+  if (!confirm('確定要重置所有欄位嗎？\n（已儲存的 Excel 資料不會清除）')) return;
+
+  // 先記下 file input 以外的 input，避免清掉 file input 造成問題
+  document.querySelectorAll('input:not([type=file])').forEach(i => { i.value = ''; });
+  document.querySelectorAll('select').forEach(s => { s.selectedIndex = 0; });
+
+  setPurchaseType('domestic');
+  document.getElementById('stock-auto-badge').style.display = 'none';
+  document.getElementById('broadcast-auto-badge').style.display = 'none';
+
+  setProcessed(true);
+  setPricing('kg');
+  document.getElementById('pricing-unit-badge').style.display = 'none';
+  document.getElementById('pricing-unit-select').value = 'kg';
+  toggleProductType();
+  document.getElementById('part1-result').style.display = 'none';
+  document.getElementById('part2-results').style.display = 'none';
+  document.getElementById('yield-rate').textContent = '100.00%';
+  document.getElementById('cost-g').textContent = '—';
+  document.getElementById('pretax-val').textContent = '—';
+  document.getElementById('taxed-val').textContent = '—';
+  document.getElementById('price-n-val').textContent = '—';
+  document.getElementById('gm-o-val').textContent = '—';
+  part1Cost = pretaxCost = taxedCost = 0;
+
+  // 重新從 localStorage 還原 Excel 資料（不清除已儲存資料）
+  broadcastPriceMap = {};
+  stockPriceMap = {};
+  loadFromLocalStorage('costapp_broadcast', 'excel-status', 'excel-clear-btn', function(map) {
+    broadcastPriceMap = map;
+  });
+  loadFromLocalStorage('costapp_stock', 'stock-excel-status', 'stock-excel-clear-btn', function(map) {
+    stockPriceMap = map;
+  });
+}
+
+updateCurrencyHint();
+
+// --- Excel Import (with localStorage) ---
 
 function clearExcelData(type) {
   if (!confirm('確定要清除已儲存的 Excel 資料嗎？')) return;
@@ -1304,6 +1355,96 @@ function matchStockPrice() {
   }
 }
 
+// --- Excel Export ---
+function exportExcel() {
+  if (typeof XLSX === 'undefined') { alert('Excel 套件尚未載入，請稍候再試'); return; }
+
+  const wb = XLSX.utils.book_new();
+  const rows = [];
+
+  // Helper
+  function addRow(label, value, section) {
+    rows.push({ '區段': section, '項目': label, '數值': value });
+  }
+
+  // Part 1
+  const ptLabel = {'domestic':'國內採購','foreign':'國外採購','stock':'在庫品'};
+  addRow('原料名稱', document.getElementById('material-name').value || '', '第一部分：原料成本');
+  addRow('採購性質', ptLabel[purchaseType] || purchaseType, '第一部分：原料成本');
+  if (purchaseType === 'foreign') {
+    addRow('幣別', document.getElementById('currency').value, '第一部分：原料成本');
+    addRow('採購價格（外幣）', document.getElementById('foreign-price').value || '', '第一部分：原料成本');
+    addRow('匯率', document.getElementById('exchange-rate').value || '', '第一部分：原料成本');
+    addRow('進口關稅%', document.getElementById('import-duty').value || '', '第一部分：原料成本');
+    addRow('雜費（採購價×2%）', document.getElementById('misc-fee-display').value || '', '第一部分：原料成本');
+  } else if (purchaseType === 'stock') {
+    addRow('料號', document.getElementById('stock-item-code').value || '', '第一部分：原料成本');
+    addRow('在庫品採購價格', document.getElementById('stock-price').value || '', '第一部分：原料成本');
+  } else {
+    addRow('採購價格（台幣）', document.getElementById('domestic-price').value || '', '第一部分：原料成本');
+  }
+  const p1val = document.getElementById('part1-value').textContent;
+  const p1unit = document.getElementById('part1-unit').textContent;
+  if (p1val !== '—') addRow('原料成本（台幣）', p1val + ' ' + p1unit, '第一部分：原料成本');
+
+  // Part 2
+  if (isProcessed) {
+    addRow('料號', document.getElementById('item-code').value || '', '第二部分：加工品成本');
+    addRow('加工品名稱', document.getElementById('product-name').value || '', '第二部分：加工品成本');
+    ['A.解凍流失','B.鋸台損耗','C.贈送值','D.凍結流失','E.拌炒流失'].forEach((label,i) => {
+      const v = document.getElementById('loss-'+['a','b','c','d','e'][i]).value;
+      if (v) addRow(label+'%', v, '第二部分：加工品成本');
+    });
+    const gradeA = document.getElementById('grade-a-rate').value;
+    const gradeB = document.getElementById('grade-b-rate').value;
+    if (gradeA) addRow('正品率%', gradeA, '第二部分：加工品成本');
+    if (gradeB) addRow('格外品率%', gradeB, '第二部分：加工品成本');
+    addRow('F.製成率', document.getElementById('yield-rate').textContent, '第二部分：加工品成本');
+    const costG = document.getElementById('cost-g').textContent;
+    if (costG !== '—') addRow('G.成品原料（冰前）成本', costG + ' ' + document.getElementById('cost-g-unit').textContent, '第二部分：加工品成本');
+    const gradeACost = document.getElementById('grade-a-cost').textContent;
+    const gradeBCost = document.getElementById('grade-b-cost').textContent;
+    if (gradeACost !== '—' && document.getElementById('grade-a-result').style.display !== 'none') addRow('正品成本', gradeACost + ' ' + document.getElementById('grade-a-unit').textContent, '第二部分：加工品成本');
+    if (gradeBCost !== '—' && document.getElementById('grade-b-result').style.display !== 'none') addRow('格外品成本', gradeBCost + ' ' + document.getElementById('grade-b-unit').textContent, '第二部分：加工品成本');
+    const ptype = document.getElementById('product-type').value;
+    if (ptype === 'ice') addRow('H.包冰率%', document.getElementById('ice-rate').value || '', '第二部分：加工品成本');
+    if (ptype === 'coating') addRow('I.裹粉率%', document.getElementById('coating-rate').value || '', '第二部分：加工品成本');
+    const pmLabel = {'kg':'公斤計價','pack':'以包計價','piece':'以件計價'};
+    addRow('J.計價方式', pmLabel[pricingMethod], '第二部分：加工品成本');
+    const bp = document.getElementById('broadcast-price').value;
+    if (bp) addRow('K.轉播價', bp + ' ' + document.getElementById('broadcast-unit').textContent, '第二部分：加工品成本');
+    const costL = document.getElementById('cost-l').textContent;
+    if (costL !== '—') addRow('L.加工品成本（未稅）', costL + ' ' + document.getElementById('cost-l-unit').textContent, '第二部分：加工品成本');
+  }
+
+  // Part 3
+  const pretax = document.getElementById('pretax-val').textContent;
+  const taxed  = document.getElementById('taxed-val').textContent;
+  const pretaxU= document.getElementById('pretax-unit').textContent;
+  const taxedU = document.getElementById('taxed-unit').textContent;
+  if (pretax !== '—') addRow('未稅成本', pretax + ' ' + pretaxU, '第三部分：毛利計算');
+  if (taxed  !== '—') addRow('M.含稅成本（×1.05）', taxed + ' ' + taxedU, '第三部分：毛利計算');
+  const gmRate = document.getElementById('gm-rate').value;
+  const priceN = document.getElementById('price-n-val').textContent;
+  if (gmRate) addRow('N.目標毛利率%', gmRate, '第三部分：毛利計算');
+  if (priceN !== '—') addRow('N.反推售價（含稅）', priceN + ' ' + document.getElementById('price-n-unit').textContent, '第三部分：毛利計算');
+  const sellPrice = document.getElementById('sell-price').value;
+  const gmO = document.getElementById('gm-o-val').textContent;
+  if (sellPrice) addRow('O.售價（含稅）', sellPrice, '第三部分：毛利計算');
+  if (gmO !== '—') addRow('O.實際毛利率', gmO, '第三部分：毛利計算');
+
+  const ws = XLSX.utils.json_to_sheet(rows, { header: ['區段','項目','數值'] });
+  // Column widths
+  ws['!cols'] = [{ wch: 20 }, { wch: 24 }, { wch: 20 }];
+
+  XLSX.utils.book_append_sheet(wb, ws, '成本計算結果');
+
+  const matName = document.getElementById('material-name').value || '成本計算';
+  const today = new Date();
+  const dateStr = today.getFullYear() + ('0'+(today.getMonth()+1)).slice(-2) + ('0'+today.getDate()).slice(-2);
+  XLSX.writeFile(wb, matName + '_成本計算_' + dateStr + '.xlsx');
+}
+
 // --- PDF Export ---
 function row(label, value, cls='') {
   return `<tr class="${cls}"><th>${label}</th><td>${value}</td></tr>`;
@@ -1367,6 +1508,16 @@ function exportPDF() {
       const v = document.getElementById(id).value;
       if (v) p2rows += row(label, v + '%');
     });
+    const gradeA = document.getElementById('grade-a-rate').value;
+    const gradeB = document.getElementById('grade-b-rate').value;
+    if (gradeA) p2rows += row('正品率', gradeA + '%');
+    if (gradeB) p2rows += row('格外品率', gradeB + '%');
+    const gradeACost = document.getElementById('grade-a-cost').textContent;
+    const gradeBCost = document.getElementById('grade-b-cost').textContent;
+    if (gradeACost !== '—' && document.getElementById('grade-a-result').style.display !== 'none')
+      p2rows += row('正品成本', gradeACost + ' ' + document.getElementById('grade-a-unit').textContent);
+    if (gradeBCost !== '—' && document.getElementById('grade-b-result').style.display !== 'none')
+      p2rows += row('格外品成本', gradeBCost + ' ' + document.getElementById('grade-b-unit').textContent);
 
     const yr = document.getElementById('yield-rate').textContent;
     p2rows += row('F. 製成率', yr);
@@ -1508,6 +1659,16 @@ async function fetchExchangeRate() {
     btn.disabled = false;
   }
 }
+
+// --- 啟動時從 localStorage 還原 Excel 資料 ---
+(function() {
+  loadFromLocalStorage('costapp_broadcast', 'excel-status', 'excel-clear-btn', function(map) {
+    broadcastPriceMap = map;
+  });
+  loadFromLocalStorage('costapp_stock', 'stock-excel-status', 'stock-excel-clear-btn', function(map) {
+    stockPriceMap = map;
+  });
+})();
 </script>
 </body>
 </html>
